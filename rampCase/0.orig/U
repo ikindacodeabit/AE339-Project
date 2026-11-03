@@ -1,0 +1,59 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "$FOAM_CASE/system/caseParameters"
+
+// Freestream velocity from the Mach number: U = M*sqrt(gamma*R*T)
+UInf            #eval{ vector($Mach*sqrt($gamma*$R*$TInf), 0, 0) };
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform $UInf;
+
+boundaryField
+{
+    // Supersonic inflow: all characteristics enter, so fix everything
+    inlet
+    {
+        type            fixedValue;
+        value           $internalField;
+    }
+
+    // Supersonic outflow: all characteristics leave, so extrapolate
+    outlet
+    {
+        type            zeroGradient;
+    }
+
+    // Far field above the body; flow is tangential or leaving here
+    top
+    {
+        type            zeroGradient;
+    }
+
+    // Inviscid walls (upstreamWall, ramp, downstreamWall)
+    walls
+    {
+        type            slip;
+    }
+
+    frontAndBack
+    {
+        type            empty;
+    }
+}
+
+// ************************************************************************* //

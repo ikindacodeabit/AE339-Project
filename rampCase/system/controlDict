@@ -1,0 +1,108 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "caseParameters"
+
+application     rhoCentralFoam;
+
+startFrom       latestTime;
+startTime       0;
+stopAt          endTime;
+
+// One flow-through time is (xUp + rampLength + xDown)/U = 2.25/833.4 = 2.7 ms
+// at Mach 2.4, so endTime is 3.7 flow-throughs.
+// The flow is supersonic everywhere, so it settles in a few flow-throughs.
+endTime         0.01;
+
+// Explicit (forward Euler) time integration: the time step is set by the
+// acoustic CFL limit. Co = 0.5 crashed when the start-up shock left through
+// the outlet on the 5 mm mesh; 0.2 is the value used by the rhoCentralFoam
+// shock tutorials (obliqueShock, forwardStep, shockTube).
+deltaT          1e-07;
+adjustTimeStep  yes;
+maxCo           0.2;
+maxDeltaT       1;
+
+writeControl    adjustable;
+writeInterval   0.001;
+purgeWrite      0;
+writeFormat     ascii;
+writePrecision  8;
+writeCompression off;
+timeFormat      general;
+timePrecision   6;
+runTimeModifiable true;
+
+functions
+{
+    // Min/max of the primitive variables and where they occur
+    minMax
+    {
+        type            fieldMinMax;
+        libs            (fieldFunctionObjects);
+        fields          (p T rho);
+        location        true;
+        writeControl    timeStep;
+        writeInterval   10;
+        log             false;
+    }
+
+    // Mach number field "Ma" for visualisation and sampling
+    MachNo
+    {
+        type            MachNo;
+        libs            (fieldFunctionObjects);
+        executeControl  writeTime;
+        writeControl    writeTime;
+    }
+
+    // Gauge pressure force on the ramp face (per 0.01 m of span).
+    // Its time history is the convergence monitor for this transient solver.
+    rampForce
+    {
+        type            forces;
+        libs            (forces);
+        writeControl    timeStep;
+        writeInterval   10;
+        patches         (ramp);
+        rho             rho;
+        pRef            $pInf;
+        CofR            (0 0 0);
+        log             false;
+    }
+
+    // Surface values of p, T, Ma along all wall patches
+    wallSamples
+    {
+        type            surfaces;
+        libs            (sampling);
+        writeControl    writeTime;
+        surfaceFormat   raw;
+        fields          (p T rho Ma);
+        interpolationScheme cell;
+        surfaces
+        {
+            walls
+            {
+                type        patch;
+                patches     (walls);
+                interpolate false;
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

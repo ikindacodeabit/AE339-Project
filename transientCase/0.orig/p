@@ -1,0 +1,57 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      p;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "$FOAM_CASE/system/caseParameters"
+
+dimensions      [1 -1 -2 0 0 0 0];
+
+internalField   uniform $pInf;
+
+boundaryField
+{
+    // Supersonic inflow: all characteristics enter, so fix everything
+    inlet
+    {
+        type            fixedValue;
+        value           $internalField;
+    }
+
+    // Extrapolate: exact once the outflow is supersonic, and a simple
+    // non-reflecting approximation while the start-up waves pass through
+    outlet
+    {
+        type            zeroGradient;
+    }
+
+    // Far field above the body; flow is tangential or leaving here
+    top
+    {
+        type            zeroGradient;
+    }
+
+    // Inviscid walls (upstreamWall, ramp, downstreamWall)
+    walls
+    {
+        type            zeroGradient;
+    }
+
+    frontAndBack
+    {
+        type            empty;
+    }
+}
+
+// ************************************************************************* //

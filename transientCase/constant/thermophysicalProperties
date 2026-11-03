@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "$FOAM_CASE/system/caseParameters"
+
+thermoType
+{
+    type            hePsiThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState perfectGas;
+    specie          specie;
+    energy          sensibleInternalEnergy;
+}
+
+// Calorically perfect air. molWeight and Cp are derived from gamma and R so
+// that the solver gas matches the analytical (theta-beta-M) gas exactly.
+mixture
+{
+    specie
+    {
+        molWeight       #eval{ 8314.4626/$R };          // [g/mol]
+    }
+    thermodynamics
+    {
+        Cp              #eval{ $gamma*$R/($gamma - 1) }; // [J/(kg K)]
+        Hf              0;
+    }
+    transport
+    {
+        mu              0;      // inviscid: rhoCentralFoam skips viscous terms
+        Pr              1;
+    }
+}
+
+// ************************************************************************* //

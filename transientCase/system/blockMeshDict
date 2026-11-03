@@ -1,0 +1,120 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "caseParameters"
+
+scale   1;
+
+// Derived geometry
+h       #eval{ $rampLength*tan(degToRad($rampAngle)) };   // ramp rise
+xOut    #eval{ $rampLength + $xDown };                    // outlet station
+zB      -0.005;                                           // 2D: one cell deep
+zF       0.005;
+
+// Cell counts (uniform spacing ~ cellSize everywhere)
+nUp     #eval{ round($xUp/$cellSize) };
+nRamp   #eval{ round($rampLength/$cellSize) };
+nDown   #eval{ round($xDown/$cellSize) };
+nY      #eval{ round($height/$cellSize) };
+
+vertices
+(
+    (#eval{-$xUp}  0       $zB)    // 0  inlet, wall
+    (0             0       $zB)    // 1  ramp corner
+    ($rampLength   $h      $zB)    // 2  ramp shoulder
+    ($xOut         $h      $zB)    // 3  outlet, wall
+    (#eval{-$xUp}  $height $zB)    // 4
+    (0             $height $zB)    // 5
+    ($rampLength   $height $zB)    // 6
+    ($xOut         $height $zB)    // 7
+
+    (#eval{-$xUp}  0       $zF)    // 8
+    (0             0       $zF)    // 9
+    ($rampLength   $h      $zF)    // 10
+    ($xOut         $h      $zF)    // 11
+    (#eval{-$xUp}  $height $zF)    // 12
+    (0             $height $zF)    // 13
+    ($rampLength   $height $zF)    // 14
+    ($xOut         $height $zF)    // 15
+);
+
+blocks
+(
+    hex (0 1 5 4  8  9 13 12) ($nUp   $nY 1) simpleGrading (1 1 1)   // upstream
+    hex (1 2 6 5  9 10 14 13) ($nRamp $nY 1) simpleGrading (1 1 1)   // ramp
+    hex (2 3 7 6 10 11 15 14) ($nDown $nY 1) simpleGrading (1 1 1)   // downstream
+);
+
+edges
+(
+);
+
+boundary
+(
+    inlet
+    {
+        type patch;
+        faces ( (0 8 12 4) );
+    }
+    outlet
+    {
+        type patch;
+        faces ( (3 7 15 11) );
+    }
+    top
+    {
+        type patch;
+        faces
+        (
+            (4 12 13 5)
+            (5 13 14 6)
+            (6 14 15 7)
+        );
+    }
+    upstreamWall
+    {
+        type wall;
+        inGroups (walls);
+        faces ( (0 1 9 8) );
+    }
+    ramp
+    {
+        type wall;
+        inGroups (walls);
+        faces ( (1 2 10 9) );
+    }
+    downstreamWall
+    {
+        type wall;
+        inGroups (walls);
+        faces ( (2 3 11 10) );
+    }
+    frontAndBack
+    {
+        type empty;
+        faces
+        (
+            (0 4 5 1) (1 5 6 2) (2 6 7 3)
+            (8 9 13 12) (9 10 14 13) (10 11 15 14)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //

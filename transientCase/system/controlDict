@@ -1,0 +1,145 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#include "caseParameters"
+
+application     rhoCentralFoam;
+
+startFrom       latestTime;
+startTime       0;
+stopAt          endTime;
+
+// Long enough for the start-up shock system to leave the domain and the
+// steady oblique-shock / expansion-fan pattern to establish. At Mach 2.4 the
+// upstream-facing start-up shock moves downstream at only 155 m/s (1D theory,
+// scripts/theory.py), so it needs about 14.5 ms to cross the 2.25 m domain.
+endTime         0.018;
+
+deltaT          1e-07;
+adjustTimeStep  yes;
+maxCo           0.2;
+maxDeltaT       1;
+
+// 240 frames for animation (every 75 microseconds). Compressed ASCII keeps
+// one frame of the 2.5 mm mesh to about 7 MB; ParaView reads .gz directly.
+writeControl    adjustable;
+writeInterval   7.5e-05;
+purgeWrite      0;
+writeFormat     ascii;
+writePrecision  6;
+writeCompression on;
+timeFormat      general;
+timePrecision   6;
+runTimeModifiable true;
+
+functions
+{
+    // Min/max of the primitive variables and where they occur
+    minMax
+    {
+        type            fieldMinMax;
+        libs            (fieldFunctionObjects);
+        fields          (p T rho);
+        location        true;
+        writeControl    timeStep;
+        writeInterval   10;
+        log             false;
+    }
+
+    // Mach number "Ma"
+    MachNo
+    {
+        type            MachNo;
+        libs            (fieldFunctionObjects);
+        executeControl  writeTime;
+        writeControl    writeTime;
+    }
+
+    // Numerical schlieren: |grad(rho)| as "magGradRho" (view on a log scale)
+    gradRho
+    {
+        type            grad;
+        libs            (fieldFunctionObjects);
+        field           rho;
+        result          gradRho;
+        executeControl  writeTime;
+        writeControl    none;
+    }
+
+    magGradRho
+    {
+        type            mag;
+        libs            (fieldFunctionObjects);
+        field           gradRho;
+        result          magGradRho;
+        executeControl  writeTime;
+        writeControl    writeTime;
+    }
+
+    // Time histories at characteristic points (every 5 time steps)
+    probes
+    {
+        type            probes;
+        libs            (sampling);
+        writeControl    timeStep;
+        writeInterval   5;
+        fields          (p T U);
+        probeLocations
+        (
+            (-0.10  0.01  0)     // upstream wall
+            ( 0.25  0.08  0)     // on the ramp, region 2
+            ( 0.40  0.20  0)     // behind the oblique shock, region 2
+            ( 1.20  0.15  0)     // behind the expansion fan, region 3
+            ( 1.60  0.90  0)     // shock / fan interaction zone
+        );
+    }
+
+    // Gauge pressure force on the ramp face (per 0.01 m of span)
+    rampForce
+    {
+        type            forces;
+        libs            (forces);
+        writeControl    timeStep;
+        writeInterval   10;
+        patches         (ramp);
+        rho             rho;
+        pRef            $pInf;
+        CofR            (0 0 0);
+        log             false;
+    }
+
+    // Wall p, T, Ma at every frame, for an x-t diagram of the wall pressure
+    wallSamples
+    {
+        type            surfaces;
+        libs            (sampling);
+        writeControl    writeTime;
+        surfaceFormat   raw;
+        fields          (p T Ma);
+        interpolationScheme cell;
+        surfaces
+        {
+            walls
+            {
+                type        patch;
+                patches     (walls);
+                interpolate false;
+            }
+        }
+    }
+}
+
+// ************************************************************************* //

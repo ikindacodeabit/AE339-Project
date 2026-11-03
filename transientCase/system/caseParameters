@@ -1,0 +1,56 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2606                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      caseParameters;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+//
+//  Single source of truth for the TRANSIENT ramp case (tunnel start-up).
+//  Included by blockMeshDict, thermophysicalProperties and 0/{p,T,U}.
+//
+//  Same flow and geometry as ../rampCase, but the domain starts as still air
+//  at (pInf, TInf) and the freestream enters through the inlet at t = 0,
+//  like a supersonic wind tunnel starting. Written densely in time for
+//  animation in ParaView (transientCase.foam).
+//
+//                         top (supersonic far field)
+//      +-----------------------------------------------------------+
+//      |                                                           |
+//   M  |                                                           |  outlet
+//  --> |                          shoulder                         |
+//      |                       ___________________________________ |
+//      |                  ___/  (Prandtl-Meyer expansion fan)      |
+//      |_____________ ___/  ramp, angle = rampAngle                |
+//      upstream     corner  (oblique shock)
+//      |<- xUp ->|<-rampLength->|<---------- xDown ---------->|
+//
+
+// ---- Freestream ------------------------------------------------------------
+Mach            2.4;        // freestream Mach number [-] (AE339 group value)
+pInf            101325;     // freestream static pressure [Pa]
+TInf            300;        // freestream static temperature [K]
+
+// ---- Gas (calorically perfect air) -----------------------------------------
+gamma           1.4;        // ratio of specific heats [-]
+R               287.1;      // specific gas constant [J/(kg K)]
+
+// ---- Geometry [m] -----------------------------------------------------------
+rampAngle       15;         // ramp deflection angle [deg]
+xUp             0.25;       // flat wall upstream of the ramp corner
+rampLength      0.5;        // horizontal extent of the ramp
+xDown           1.5;        // flat wall downstream of the shoulder
+height          1.25;       // domain height above the corner
+
+// ---- Mesh ------------------------------------------------------------------
+cellSize        0.0025;     // target uniform cell size [m] (450,000 cells)
+
+// ************************************************************************* //
